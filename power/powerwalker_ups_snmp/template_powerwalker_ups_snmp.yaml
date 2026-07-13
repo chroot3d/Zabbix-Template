@@ -1,0 +1,665 @@
+zabbix_export:
+  version: '7.4'
+  template_groups:
+    - uuid: 50c0ae5180c34822be64f050c8036407
+      name: 'Templates/Power'
+  templates:
+    - uuid: 44b5bb998cc747289c4ddf4fde3d028a
+      template: 'PowerWalker UPS by SNMP'
+      name: 'PowerWalker UPS by SNMP'
+      description: |
+        Template pour onduleurs PowerWalker (BlueWalker) exposant la MIB standard RFC 1628 (UPS-MIB, 1.3.6.1.2.1.33) via une Network Management Card.
+
+        Testé sur PowerWalker VFI 500 VA, NMC G2, firmware 2.2.0-r2.
+
+        MIB utilisee: UPS-MIB (RFC 1628)
+
+        SNMP v2c par defaut, ajustable en v3.
+      groups:
+        - name: 'Templates/Power'
+      items:
+        - uuid: 723f1ef8265049ff8f90c41f15905032
+          name: 'UPS: Identification fabricant'
+          type: SNMP_AGENT
+          snmp_oid: '1.3.6.1.2.1.33.1.1.1.0'
+          key: ups.ident.manufacturer
+          delay: 1h
+          history: 7d
+          trends: '0'
+          value_type: CHAR
+          description: 'upsIdentManufacturer'
+          tags:
+            - tag: component
+              value: system
+        - uuid: 2080ca4442604cd4902b682492b9cfae
+          name: 'UPS: Modele'
+          type: SNMP_AGENT
+          snmp_oid: '1.3.6.1.2.1.33.1.1.2.0'
+          key: ups.ident.model
+          delay: 1h
+          history: 7d
+          trends: '0'
+          value_type: CHAR
+          description: 'upsIdentModel'
+          tags:
+            - tag: component
+              value: system
+        - uuid: bfee120e2a8a43aa9bb3000b2de64880
+          name: 'UPS: Version firmware'
+          type: SNMP_AGENT
+          snmp_oid: '1.3.6.1.2.1.33.1.1.4.0'
+          key: ups.ident.firmware
+          delay: 1h
+          history: 7d
+          trends: '0'
+          value_type: CHAR
+          description: 'upsIdentUPSSoftwareVersion'
+          tags:
+            - tag: component
+              value: system
+        - uuid: e53c6e6c58424aaea4bdd8a66d3ef625
+          name: 'SNMP: Nom systeme (sysName)'
+          type: SNMP_AGENT
+          snmp_oid: '1.3.6.1.2.1.1.5.0'
+          key: system.name
+          delay: 1h
+          history: 7d
+          trends: '0'
+          value_type: CHAR
+          description: 'sysName: nom administratif attribue a l equipement.'
+          preprocessing:
+            - type: DISCARD_UNCHANGED_HEARTBEAT
+              parameters:
+                - 1d
+          tags:
+            - tag: component
+              value: system
+        - uuid: 340e2b64c54b447da94a1468b1a6cfe5
+          name: 'SNMP: Emplacement (sysLocation)'
+          type: SNMP_AGENT
+          snmp_oid: '1.3.6.1.2.1.1.6.0'
+          key: system.location
+          delay: 1h
+          history: 7d
+          trends: '0'
+          value_type: CHAR
+          description: 'sysLocation: emplacement physique de l equipement.'
+          preprocessing:
+            - type: DISCARD_UNCHANGED_HEARTBEAT
+              parameters:
+                - 1d
+          tags:
+            - tag: component
+              value: system
+        - uuid: d0c5e959578f47e0bdfc88b8b0fac260
+          name: 'SNMP: Contact (sysContact)'
+          type: SNMP_AGENT
+          snmp_oid: '1.3.6.1.2.1.1.4.0'
+          key: system.contact
+          delay: 1h
+          history: 7d
+          trends: '0'
+          value_type: CHAR
+          description: 'sysContact: personne responsable de l equipement.'
+          preprocessing:
+            - type: DISCARD_UNCHANGED_HEARTBEAT
+              parameters:
+                - 1d
+          tags:
+            - tag: component
+              value: system
+        - uuid: c07822aa9d47475d84ce7fd8e4e19dff
+          name: 'SNMP: Description systeme (sysDescr)'
+          type: SNMP_AGENT
+          snmp_oid: '1.3.6.1.2.1.1.1.0'
+          key: system.descr
+          delay: 1h
+          history: 7d
+          trends: '0'
+          value_type: CHAR
+          description: 'sysDescr: description textuelle de l equipement.'
+          preprocessing:
+            - type: DISCARD_UNCHANGED_HEARTBEAT
+              parameters:
+                - 1d
+          tags:
+            - tag: component
+              value: system
+        - uuid: 089b1605a0a44f8fbb9d854e0f05df77
+          name: 'SNMP: Identifiant objet (sysObjectID)'
+          type: SNMP_AGENT
+          snmp_oid: '1.3.6.1.2.1.1.2.0'
+          key: system.objectid
+          delay: 1h
+          history: 7d
+          trends: '0'
+          value_type: CHAR
+          description: 'sysObjectID: identifiant du fabricant/modele.'
+          preprocessing:
+            - type: DISCARD_UNCHANGED_HEARTBEAT
+              parameters:
+                - 1d
+          tags:
+            - tag: component
+              value: system
+        - uuid: 3c709588bb994eaeb1fd983165f857c1
+          name: 'SNMP: Uptime (sysUpTime)'
+          type: SNMP_AGENT
+          snmp_oid: '1.3.6.1.2.1.1.3.0'
+          key: system.uptime
+          delay: 1m
+          history: 7d
+          trends: 365d
+          units: uptime
+          description: 'sysUpTime: temps ecoule depuis la derniere reinitialisation de la partie gestion SNMP (centiemes de seconde).'
+          preprocessing:
+            - type: MULTIPLIER
+              parameters:
+                - '0.01'
+          tags:
+            - tag: component
+              value: system
+        - uuid: c5c2eec5f76a48fdb8d07c6a69a3d385
+          name: 'SNMP: Disponibilite agent'
+          type: INTERNAL
+          key: 'zabbix[host,snmp,available]'
+          delay: 1m
+          history: 7d
+          trends: 365d
+          description: 'Disponibilite de l interface SNMP de l equipement.'
+          valuemap:
+            name: 'zabbix.host.available'
+          tags:
+            - tag: component
+              value: system
+        - uuid: 548e20b2a9704f7ebc932082b4677dbf
+          name: 'UPS: Etat batterie'
+          type: SNMP_AGENT
+          snmp_oid: '1.3.6.1.2.1.33.1.2.1.0'
+          key: ups.battery.status
+          delay: 1m
+          history: 7d
+          trends: 365d
+          description: 'upsBatteryStatus: 1 unknown, 2 batteryNormal, 3 batteryLow, 4 batteryDepleted'
+          valuemap:
+            name: 'UPS battery status'
+          tags:
+            - tag: component
+              value: battery
+        - uuid: 85a7c363306d454fb6e82bf724012719
+          name: 'UPS: Temps sur batterie'
+          type: SNMP_AGENT
+          snmp_oid: '1.3.6.1.2.1.33.1.2.2.0'
+          key: ups.battery.seconds_on_battery
+          delay: 1m
+          history: 7d
+          trends: 365d
+          units: s
+          description: 'upsSecondsOnBattery: 0 = alimente par le secteur'
+          tags:
+            - tag: component
+              value: battery
+        - uuid: 905ea269d6a748afa5f51f87215a88f3
+          name: 'UPS: Autonomie restante estimee'
+          type: SNMP_AGENT
+          snmp_oid: '1.3.6.1.2.1.33.1.2.3.0'
+          key: ups.battery.runtime_remaining
+          delay: 1m
+          history: 7d
+          trends: 365d
+          units: min
+          description: 'upsEstimatedMinutesRemaining'
+          tags:
+            - tag: component
+              value: battery
+        - uuid: 0da16fa436a440da9597dfbaf86b3984
+          name: 'UPS: Charge batterie restante'
+          type: SNMP_AGENT
+          snmp_oid: '1.3.6.1.2.1.33.1.2.4.0'
+          key: ups.battery.charge_remaining
+          delay: 1m
+          history: 7d
+          trends: 365d
+          units: '%'
+          description: 'upsEstimatedChargeRemaining'
+          tags:
+            - tag: component
+              value: battery
+        - uuid: d98621f1795c4c74937271dc28d21481
+          name: 'UPS: Tension batterie'
+          type: SNMP_AGENT
+          snmp_oid: '1.3.6.1.2.1.33.1.2.5.0'
+          key: ups.battery.voltage
+          delay: 1m
+          history: 7d
+          trends: 365d
+          value_type: FLOAT
+          units: V
+          description: 'upsBatteryVoltage en dixiemes de volt (0.1 V). Preprocessing applique un facteur 0.1.'
+          preprocessing:
+            - type: MULTIPLIER
+              parameters:
+                - '0.1'
+          tags:
+            - tag: component
+              value: battery
+        - uuid: 54fdf30c4df544c18340ba132f196559
+          name: 'UPS: Tension entree'
+          type: SNMP_AGENT
+          snmp_oid: '1.3.6.1.2.1.33.1.3.3.1.3.1'
+          key: ups.input.voltage
+          delay: 1m
+          history: 7d
+          trends: 365d
+          units: V
+          description: 'upsInputVoltage (ligne 1)'
+          tags:
+            - tag: component
+              value: input
+        - uuid: 245c58f15b204ef2b295cdd98d3987aa
+          name: 'UPS: Source alimentation sortie'
+          type: SNMP_AGENT
+          snmp_oid: '1.3.6.1.2.1.33.1.4.1.0'
+          key: ups.output.source
+          delay: 1m
+          history: 7d
+          trends: 365d
+          description: 'upsOutputSource: 1 other, 2 none, 3 normal, 4 bypass, 5 battery, 6 booster, 7 reducer'
+          valuemap:
+            name: 'UPS output source'
+          tags:
+            - tag: component
+              value: output
+        - uuid: af54abb869fd474a978425baadcff870
+          name: 'UPS: Tension sortie'
+          type: SNMP_AGENT
+          snmp_oid: '1.3.6.1.2.1.33.1.4.4.1.2.1'
+          key: ups.output.voltage
+          delay: 1m
+          history: 7d
+          trends: 365d
+          units: V
+          description: 'upsOutputVoltage (ligne 1)'
+          tags:
+            - tag: component
+              value: output
+        - uuid: baab1cc3115f43bfa6919a7f08595771
+          name: 'UPS: Courant sortie'
+          type: SNMP_AGENT
+          snmp_oid: '1.3.6.1.2.1.33.1.4.4.1.3.1'
+          key: ups.output.current
+          delay: 1m
+          history: 7d
+          trends: 365d
+          value_type: FLOAT
+          units: A
+          description: 'upsOutputCurrent en dixiemes d ampere (0.1 A). Preprocessing applique un facteur 0.1.'
+          preprocessing:
+            - type: MULTIPLIER
+              parameters:
+                - '0.1'
+          tags:
+            - tag: component
+              value: output
+        - uuid: 2d528f47a712466fbfb20dabf96c11d8
+          name: 'UPS: Puissance sortie'
+          type: SNMP_AGENT
+          snmp_oid: '1.3.6.1.2.1.33.1.4.4.1.4.1'
+          key: ups.output.power
+          delay: 1m
+          history: 7d
+          trends: 365d
+          units: W
+          description: 'upsOutputPower (watts)'
+          tags:
+            - tag: component
+              value: output
+        - uuid: aeac69a6513e4ec392cc088268fdb0e6
+          name: 'UPS: Charge sortie'
+          type: SNMP_AGENT
+          snmp_oid: '1.3.6.1.2.1.33.1.4.4.1.5.1'
+          key: ups.output.load
+          delay: 1m
+          history: 7d
+          trends: 365d
+          units: '%'
+          description: 'upsOutputPercentLoad'
+          tags:
+            - tag: component
+              value: output
+      macros:
+        - macro: '{$UPS.BATTERY.CHARGE.WARN}'
+          value: '50'
+          description: 'Seuil bas de charge batterie restante (%) pour avertissement.'
+        - macro: '{$UPS.BATTERY.RUNTIME.WARN}'
+          value: '10'
+          description: 'Seuil bas d autonomie restante (minutes) pour avertissement.'
+        - macro: '{$UPS.OUTPUT.LOAD.WARN}'
+          value: '80'
+          description: 'Seuil haut de charge de sortie (%) pour avertissement.'
+        - macro: '{$UPS.OUTPUT.LOAD.HIGH}'
+          value: '95'
+          description: 'Seuil haut de charge de sortie (%) pour alerte critique.'
+      dashboards:
+        - uuid: 915851405b8a4ce5a839f57a3c92f933
+          name: 'PowerWalker UPS'
+          pages:
+            - name: 'Vue d ensemble'
+              widgets:
+                - type: item
+                  name: 'Source alimentation sortie'
+                  width: '24'
+                  height: '2'
+                  fields:
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'PowerWalker UPS by SNMP'
+                        key: 'ups.output.source'
+                - type: item
+                  name: 'Etat batterie'
+                  x: '24'
+                  width: '24'
+                  height: '2'
+                  fields:
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'PowerWalker UPS by SNMP'
+                        key: 'ups.battery.status'
+                - type: item
+                  name: 'Disponibilite SNMP'
+                  x: '48'
+                  width: '24'
+                  height: '2'
+                  fields:
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'PowerWalker UPS by SNMP'
+                        key: 'zabbix[host,snmp,available]'
+                - type: gauge
+                  name: 'Charge batterie'
+                  'y': '2'
+                  width: '24'
+                  height: '5'
+                  fields:
+                    - type: STRING
+                      name: min
+                      value: '0'
+                    - type: STRING
+                      name: max
+                      value: '100'
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'PowerWalker UPS by SNMP'
+                        key: 'ups.battery.charge_remaining'
+                - type: gauge
+                  name: 'Charge sortie'
+                  x: '24'
+                  'y': '2'
+                  width: '24'
+                  height: '5'
+                  fields:
+                    - type: STRING
+                      name: min
+                      value: '0'
+                    - type: STRING
+                      name: max
+                      value: '100'
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'PowerWalker UPS by SNMP'
+                        key: 'ups.output.load'
+                - type: item
+                  name: 'Autonomie restante'
+                  x: '48'
+                  'y': '2'
+                  width: '24'
+                  height: '5'
+                  fields:
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'PowerWalker UPS by SNMP'
+                        key: 'ups.battery.runtime_remaining'
+                - type: item
+                  name: 'Tension entree'
+                  'y': '7'
+                  width: '18'
+                  height: '2'
+                  fields:
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'PowerWalker UPS by SNMP'
+                        key: 'ups.input.voltage'
+                - type: item
+                  name: 'Tension sortie'
+                  x: '18'
+                  'y': '7'
+                  width: '18'
+                  height: '2'
+                  fields:
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'PowerWalker UPS by SNMP'
+                        key: 'ups.output.voltage'
+                - type: item
+                  name: 'Puissance sortie'
+                  x: '36'
+                  'y': '7'
+                  width: '18'
+                  height: '2'
+                  fields:
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'PowerWalker UPS by SNMP'
+                        key: 'ups.output.power'
+                - type: item
+                  name: 'Tension batterie'
+                  x: '54'
+                  'y': '7'
+                  width: '18'
+                  height: '2'
+                  fields:
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'PowerWalker UPS by SNMP'
+                        key: 'ups.battery.voltage'
+                - type: problems
+                  name: 'Problemes'
+                  'y': '9'
+                  width: '72'
+                  height: '5'
+            - name: 'Graphiques'
+              widgets:
+                - type: svggraph
+                  name: 'Tensions entree / sortie'
+                  width: '36'
+                  height: '6'
+                  fields:
+                    - type: ITEM
+                      name: ds.0.itemids.0
+                      value:
+                        host: 'PowerWalker UPS by SNMP'
+                        key: 'ups.input.voltage'
+                    - type: ITEM
+                      name: ds.0.itemids.1
+                      value:
+                        host: 'PowerWalker UPS by SNMP'
+                        key: 'ups.output.voltage'
+                    - type: STRING
+                      name: ds.0.color
+                      value: '1E90FF'
+                    - type: INTEGER
+                      name: ds.0.transparency
+                      value: '3'
+                - type: svggraph
+                  name: 'Charge de sortie'
+                  x: '36'
+                  width: '36'
+                  height: '6'
+                  fields:
+                    - type: ITEM
+                      name: ds.0.itemids.0
+                      value:
+                        host: 'PowerWalker UPS by SNMP'
+                        key: 'ups.output.load'
+                    - type: STRING
+                      name: ds.0.color
+                      value: '32CD32'
+                    - type: INTEGER
+                      name: ds.0.transparency
+                      value: '3'
+                - type: svggraph
+                  name: 'Charge batterie'
+                  'y': '6'
+                  width: '36'
+                  height: '6'
+                  fields:
+                    - type: ITEM
+                      name: ds.0.itemids.0
+                      value:
+                        host: 'PowerWalker UPS by SNMP'
+                        key: 'ups.battery.charge_remaining'
+                    - type: STRING
+                      name: ds.0.color
+                      value: 'FFD700'
+                    - type: INTEGER
+                      name: ds.0.transparency
+                      value: '3'
+                - type: svggraph
+                  name: 'Autonomie restante'
+                  x: '36'
+                  'y': '6'
+                  width: '36'
+                  height: '6'
+                  fields:
+                    - type: ITEM
+                      name: ds.0.itemids.0
+                      value:
+                        host: 'PowerWalker UPS by SNMP'
+                        key: 'ups.battery.runtime_remaining'
+                    - type: STRING
+                      name: ds.0.color
+                      value: '9370DB'
+                    - type: INTEGER
+                      name: ds.0.transparency
+                      value: '3'
+      valuemaps:
+        - uuid: 4e970623f693434eac35cd40113d49cc
+          name: 'UPS battery status'
+          mappings:
+            - value: '1'
+              newvalue: unknown
+            - value: '2'
+              newvalue: normal
+            - value: '3'
+              newvalue: low
+            - value: '4'
+              newvalue: depleted
+        - uuid: 2b6bec1125ab4c5eaca6f8400b233aa4
+          name: 'UPS output source'
+          mappings:
+            - value: '1'
+              newvalue: other
+            - value: '2'
+              newvalue: none
+            - value: '3'
+              newvalue: normal
+            - value: '4'
+              newvalue: bypass
+            - value: '5'
+              newvalue: battery
+            - value: '6'
+              newvalue: booster
+            - value: '7'
+              newvalue: reducer
+        - uuid: 3c938b9e78e94895ba631acc3545c339
+          name: 'zabbix.host.available'
+          mappings:
+            - value: '0'
+              newvalue: unknown
+            - value: '1'
+              newvalue: available
+            - value: '2'
+              newvalue: unavailable
+  triggers:
+    - uuid: ee18da815e8b4bc5bf8b9c1a330030db
+      expression: 'nodata(/PowerWalker UPS by SNMP/system.uptime,10m)=1'
+      name: 'UPS: Pas de donnees SNMP depuis 10 minutes'
+      priority: HIGH
+      description: 'Zabbix ne recoit plus de donnees SNMP de l onduleur depuis 10 minutes. Verifier l alimentation de la carte reseau, le reseau ou la config SNMP.'
+      tags:
+        - tag: scope
+          value: availability
+    - uuid: daa7272dc34a4a7b8b34c73c31781a32
+      expression: 'last(/PowerWalker UPS by SNMP/system.uptime)<10m'
+      name: 'UPS: La carte reseau a redemarre'
+      priority: INFO
+      description: 'L uptime SNMP est inferieur a 10 minutes, la carte de gestion a probablement redemarre.'
+      tags:
+        - tag: scope
+          value: notice
+    - uuid: 20edb7a1d66640aaa039b2ecb1016783
+      expression: 'last(/PowerWalker UPS by SNMP/ups.output.source)=5'
+      name: 'UPS: Fonctionne sur batterie (coupure secteur)'
+      priority: HIGH
+      description: 'L onduleur est passe sur batterie, ce qui indique une coupure ou anomalie du secteur.'
+      tags:
+        - tag: scope
+          value: availability
+    - uuid: 4ab33997cb80465dab9f5b9ba00cb784
+      expression: 'last(/PowerWalker UPS by SNMP/ups.battery.status)=3'
+      name: 'UPS: Batterie basse'
+      priority: HIGH
+      description: 'upsBatteryStatus signale une batterie basse (batteryLow).'
+      tags:
+        - tag: scope
+          value: availability
+    - uuid: bf1ab625c2f14995a8bffecb4f0b911a
+      expression: 'last(/PowerWalker UPS by SNMP/ups.battery.status)=4'
+      name: 'UPS: Batterie epuisee'
+      priority: DISASTER
+      description: 'upsBatteryStatus signale une batterie epuisee (batteryDepleted).'
+      tags:
+        - tag: scope
+          value: availability
+    - uuid: 1034fe0804554a69b7248ec162571596
+      expression: 'last(/PowerWalker UPS by SNMP/ups.battery.charge_remaining)<{$UPS.BATTERY.CHARGE.WARN}'
+      name: 'UPS: Charge batterie faible'
+      priority: WARNING
+      description: 'La charge restante de la batterie est sous le seuil defini.'
+      tags:
+        - tag: scope
+          value: capacity
+    - uuid: 32f37228dd434af5ace54ae0c2f7db31
+      expression: 'last(/PowerWalker UPS by SNMP/ups.battery.runtime_remaining)<{$UPS.BATTERY.RUNTIME.WARN}'
+      name: 'UPS: Autonomie restante faible'
+      priority: WARNING
+      description: 'L autonomie estimee restante est sous le seuil defini.'
+      tags:
+        - tag: scope
+          value: capacity
+    - uuid: 159fd01b0a574e6dbc1dd306def9c38f
+      expression: 'min(/PowerWalker UPS by SNMP/ups.output.load,5m)>{$UPS.OUTPUT.LOAD.HIGH}'
+      name: 'UPS: Charge de sortie critique'
+      priority: HIGH
+      description: 'La charge de sortie depasse le seuil critique sur 5 minutes.'
+      tags:
+        - tag: scope
+          value: capacity
+    - uuid: b61c613a0cf64186bf498b9e4a73865f
+      expression: 'min(/PowerWalker UPS by SNMP/ups.output.load,5m)>{$UPS.OUTPUT.LOAD.WARN} and min(/PowerWalker UPS by SNMP/ups.output.load,5m)<={$UPS.OUTPUT.LOAD.HIGH}'
+      name: 'UPS: Charge de sortie elevee'
+      priority: WARNING
+      description: 'La charge de sortie depasse le seuil d avertissement sur 5 minutes.'
+      tags:
+        - tag: scope
+          value: capacity
