@@ -69,13 +69,6 @@ zabbix_export:
                       });
                   }
                   return JSON.stringify(out);
-          filter:
-            evaltype: AND
-            conditions:
-              - macro: '{#PVE.VM.NAME}'
-                value: '{$ZBX.VM.IGNORE.MATCHES}'
-                operator: NOT_MATCHES_REGEX
-                formulaid: A
           item_prototypes:
             - uuid: 70f12b925ad44aacb12794b00fa279be
               name: 'VM [{#PVE.VM.NAME}]: Zabbix host present'
@@ -91,6 +84,18 @@ zabbix_export:
                 var vmName = '{#PVE.VM.NAME}';
                 var rawUrl = '{$ZABBIX.URL}';
                 var apiToken = '{$ZBX.API.TOKEN}';
+                var ignore = '{$ZBX.VM.IGNORE.MATCHES}';
+
+                // VMs exclues volontairement (serveur/proxys Zabbix): valeur forcee a 2 (ignore),
+                // sans interroger l'API. Le trigger ne se declenche que sur 0.
+                // La correspondance est insensible a la casse (flag 'i').
+                if (ignore && ignore.indexOf('{' + '$') !== 0) {
+                    try {
+                        if (new RegExp(ignore, 'i').test(vmName)) {
+                            return '2';
+                        }
+                    } catch (e) { /* regex invalide: on ignore l'exclusion */ }
+                }
 
                 // Validations explicites pour diagnostiquer plutot que planter.
                 if (!rawUrl || rawUrl === '' || rawUrl.indexOf('{' + '$') === 0) {
@@ -170,23 +175,22 @@ zabbix_export:
         - macro: '{$ZBX.VM.IGNORE.MATCHES}'
           value: '^$'
           description: |
-            Expression reguliere des noms de VM/hosts a exclure du controle (typiquement le serveur et le/les proxy Zabbix).
+            Expression reguliere des noms de VM a traiter comme "ignore volontairement" (typiquement le serveur et le/les proxy Zabbix).
+            Ces VMs restent decouvertes et visibles mais leur item est force a la valeur 2 (ignore), sans interroger l'API, donc sans alerte.
             Exemple: ^(zabbix-srv|zabbix-proxy01|zabbix-proxy02)$
-            Valeur par defaut ^$ = n'exclut rien.
+            La correspondance est deja insensible a la casse, ne pas ajouter (?i) (non supporte en JavaScript).
+            Valeur par defaut ^$ = n'ignore rien.
       dashboards:
-        - uuid: 8f061f2d1a96450bb9498c0fbd6beaa0
-          name: 'VMs sans host Zabbix'
+        - uuid: f80c5346537a4a3f9647fdf53788117c
+          name: 'VMs Zabbix agent check'
           pages:
-            - name: 'Vue d ensemble'
+            - name: 'VMs absentes'
               widgets:
                 - type: problems
                   name: 'VMs presentes dans Proxmox mais absentes de Zabbix'
                   width: '72'
-                  height: '8'
+                  height: '13'
                   fields:
-                    - type: INTEGER
-                      name: show_tags
-                      value: '3'
                     - type: INTEGER
                       name: show
                       value: '3'
@@ -199,12 +203,12 @@ zabbix_export:
                     - type: STRING
                       name: tags.0.value
                       value: vm_no_zabbix_host
+            - name: 'Recemment resolues'
+              widgets:
                 - type: problems
-                  name: 'Problemes recemment resolus'
-                  x: '0'
-                  'y': '8'
+                  name: 'VMs recemment ajoutees a Zabbix (problemes resolus)'
                   width: '72'
-                  height: '5'
+                  height: '13'
                   fields:
                     - type: INTEGER
                       name: show
@@ -226,3 +230,5 @@ zabbix_export:
               newvalue: 'absent (pas de host Zabbix)'
             - value: '1'
               newvalue: 'present'
+            - value: '2'
+              newvalue: 'ignore volontairement'
