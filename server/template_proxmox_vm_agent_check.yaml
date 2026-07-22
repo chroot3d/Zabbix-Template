@@ -1,0 +1,224 @@
+zabbix_export:
+  version: '7.4'
+  template_groups:
+    - uuid: e8c68e3ecb9a425dbed988c79500d384
+      name: 'Templates/Applications'
+  templates:
+    - uuid: 5adc8d11f1e643d99e8c2c20767d9c4d
+      template: 'Proxmox VM Zabbix agent check'
+      name: 'Proxmox VM Zabbix agent check'
+      description: |
+        Template complementaire a "Proxmox VE by HTTP".
+
+        Objectif: lever une alerte d'information lorsqu'une VM QEMU existe dans Proxmox mais n'existe PAS comme host dans Zabbix (VM jamais ajoutee a la supervision / sans agent Zabbix).
+
+        Approche autonome (independante de la structure interne de la template officielle):
+        - Une regle LLD de type HTTP agent interroge directement l'API Proxmox /cluster/resources.
+        - Elle filtre les ressources de type "qemu" et projette le nom de chaque VM.
+        - Pour chaque VM, un item Script interroge l'API Zabbix (host.get) pour verifier l'existence d'un host du meme nom.
+        - Un trigger d'information se declenche si aucun host correspondant n'existe.
+
+        Prerequis:
+        - Lier ce template au meme host que "Proxmox VE by HTTP" (il reutilise les memes macros Proxmox: URL, token, port).
+        - Un token API Zabbix en LECTURE SEULE, avec droits de lecture sur les hosts.
+        - La macro {$ZBX.API.TOKEN} renseignee. L'URL de l'API est construite a partir de la macro globale existante {$ZABBIX.URL} (URL de base du frontend), a laquelle le script ajoute /api_jsonrpc.php.
+
+        Les noms des VM dans Proxmox doivent correspondre exactement aux noms techniques des hosts dans Zabbix.
+      groups:
+        - name: 'Templates/Applications'
+      discovery_rules:
+        - uuid: f4454bede7f44a2f911018a5f7e8d8ac
+          name: 'VM discovery (Zabbix agent check)'
+          type: HTTP_AGENT
+          key: proxmox.vm.agentcheck.discovery
+          delay: 1h
+          url: 'https://{$PVE.URL.HOST}:{$PVE.URL.PORT}/api2/json/cluster/resources'
+          query_fields:
+            - name: type
+              value: vm
+          headers:
+            - name: Authorization
+              value: 'PVEAPIToken={$PVE.TOKEN.ID}={$PVE.TOKEN.SECRET}'
+          status_codes: '200'
+          follow_redirects: 'NO'
+          verify_peer: 'NO'
+          verify_host: 'NO'
+          description: |
+            Decouvre les VM QEMU directement depuis l'API Proxmox /cluster/resources (type=vm), puis filtre les entrees qemu et applique la liste d'exclusion.
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.data'
+              error_handler: CUSTOM_VALUE
+              error_handler_params: '[]'
+            - type: JAVASCRIPT
+              parameters:
+                - |
+                  // Filtre les VMs QEMU et exclut les noms correspondant a {$ZBX.VM.IGNORE.MATCHES}
+                  var rows = JSON.parse(value);
+                  var ignore = '{$ZBX.VM.IGNORE.MATCHES}';
+                  var re = null;
+                  try { if (ignore && ignore.indexOf('{' + '$') !== 0) { re = new RegExp(ignore); } } catch (e) { re = null; }
+                  var out = [];
+                  for (var i = 0; i < rows.length; i++) {
+                      var r = rows[i];
+                      if (r.type !== 'qemu') { continue; }
+                      if (!r.name) { continue; }
+                      if (re && re.test(r.name)) { continue; }
+                      out.push({
+                          '{#PVE.VM.NAME}': r.name,
+                          '{#PVE.VM.VMID}': (r.vmid !== undefined ? String(r.vmid) : ''),
+                          '{#PVE.NODE.NAME}': (r.node || '')
+                      });
+                  }
+                  return JSON.stringify(out);
+          item_prototypes:
+            - uuid: 70f12b925ad44aacb12794b00fa279be
+              name: 'VM [{#PVE.VM.NAME}]: Zabbix host present'
+              type: SCRIPT
+              key: 'proxmox.vm.zabbix_host_present[{#PVE.VM.NAME}]'
+              delay: 1h
+              history: 7d
+              trends: 365d
+              description: |
+                Retourne 1 si un host Zabbix du meme nom que la VM existe, 0 sinon. Interroge l'API Zabbix via host.get.
+              params: |
+                // Les macros sont resolues directement dans le corps du script.
+                var vmName = '{#PVE.VM.NAME}';
+                var rawUrl = '{$ZABBIX.URL}';
+                var apiToken = '{$ZBX.API.TOKEN}';
+
+                // Validations explicites pour diagnostiquer plutot que planter.
+                if (!rawUrl || rawUrl === '' || rawUrl.indexOf('{' + '$') === 0) {
+                    throw 'Macro {$ZABBIX.URL} non resolue (valeur: "' + rawUrl + '"). Definir {$ZABBIX.URL} au niveau du host ou global.';
+                }
+                if (!apiToken || apiToken === '' || apiToken.indexOf('{' + '$') === 0) {
+                    throw 'Macro {$ZBX.API.TOKEN} non resolue. Renseigner {$ZBX.API.TOKEN}.';
+                }
+
+                // URL de base du frontend (ex: http://zabbix.local) -> ajout de l'endpoint JSON-RPC.
+                var baseUrl = rawUrl.replace(/\/+$/, '');
+                var apiUrl = baseUrl + '/api_jsonrpc.php';
+
+                var request = new HttpRequest();
+                request.addHeader('Content-Type: application/json');
+                request.addHeader('Authorization: Bearer ' + apiToken);
+
+                var payload = JSON.stringify({
+                    jsonrpc: '2.0',
+                    method: 'host.get',
+                    params: {
+                        output: ['hostid'],
+                        filter: { host: [vmName] },
+                        limit: 1
+                    },
+                    id: 1
+                });
+
+                var response = request.post(apiUrl, payload);
+
+                if (request.getStatus() != 200) {
+                    throw 'API HTTP status ' + request.getStatus() + ' sur ' + apiUrl;
+                }
+
+                var parsed = JSON.parse(response);
+                if (parsed.error) {
+                    throw 'API error: ' + JSON.stringify(parsed.error);
+                }
+
+                var result = parsed.result;
+                return (result && result.length > 0) ? '1' : '0';
+              valuemap:
+                name: 'Zabbix host presence'
+              trigger_prototypes:
+                - uuid: bb7a21b306a14155ac0f1c61abc1d6be
+                  expression: 'last(/Proxmox VM Zabbix agent check/proxmox.vm.zabbix_host_present[{#PVE.VM.NAME}])=0'
+                  name: 'VM [{#PVE.VM.NAME}] presente dans Proxmox mais absente de Zabbix (pas d agent)'
+                  priority: INFO
+                  description: |
+                    La VM {#PVE.VM.NAME} est listee par Proxmox mais aucun host Zabbix du meme nom n'existe. Elle n'a probablement pas ete ajoutee a la supervision (agent Zabbix non installe / host non cree).
+                  manual_close: 'YES'
+                  tags:
+                    - tag: scope
+                      value: notice
+                    - tag: class
+                      value: vm_no_zabbix_host
+              tags:
+                - tag: component
+                  value: vm-agent-check
+      macros:
+        - macro: '{$PVE.URL.HOST}'
+          description: |
+            Nom d'hote ou IP de l'API Proxmox VE. Reutilise la macro de la template officielle (heritee si definie au niveau du host).
+        - macro: '{$PVE.URL.PORT}'
+          value: '8006'
+          description: 'Port de l API Proxmox VE. Reutilise la macro de la template officielle.'
+        - macro: '{$PVE.TOKEN.ID}'
+          value: 'USER@REALM!TOKENID'
+          description: 'ID du token API Proxmox. Reutilise la macro de la template officielle.'
+        - macro: '{$PVE.TOKEN.SECRET}'
+          type: SECRET_TEXT
+          description: 'Secret du token API Proxmox. Reutilise la macro de la template officielle.'
+        - macro: '{$ZBX.API.TOKEN}'
+          type: SECRET_TEXT
+          description: |
+            Token API Zabbix en LECTURE SEULE (Users > API tokens), sur un utilisateur ayant des droits de lecture sur les hosts a verifier.
+        - macro: '{$ZBX.VM.IGNORE.MATCHES}'
+          value: '^$'
+          description: |
+            Expression reguliere des noms de VM/hosts a exclure du controle (typiquement le serveur et le/les proxy Zabbix).
+            Exemple: ^(zabbix-srv|zabbix-proxy01|zabbix-proxy02)$
+            Valeur par defaut ^$ = n'exclut rien.
+      dashboards:
+        - uuid: 8f061f2d1a96450bb9498c0fbd6beaa0
+          name: 'VMs sans host Zabbix'
+          pages:
+            - name: 'Vue d ensemble'
+              widgets:
+                - type: problems
+                  name: 'VMs presentes dans Proxmox mais absentes de Zabbix'
+                  width: '72'
+                  height: '8'
+                  fields:
+                    - type: INTEGER
+                      name: show_tags
+                      value: '3'
+                    - type: INTEGER
+                      name: show
+                      value: '3'
+                    - type: STRING
+                      name: tags.0.tag
+                      value: class
+                    - type: INTEGER
+                      name: tags.0.operator
+                      value: '1'
+                    - type: STRING
+                      name: tags.0.value
+                      value: vm_no_zabbix_host
+                - type: problems
+                  name: 'Problemes recemment resolus'
+                  x: '0'
+                  'y': '8'
+                  width: '72'
+                  height: '5'
+                  fields:
+                    - type: INTEGER
+                      name: show
+                      value: '2'
+                    - type: STRING
+                      name: tags.0.tag
+                      value: class
+                    - type: INTEGER
+                      name: tags.0.operator
+                      value: '1'
+                    - type: STRING
+                      name: tags.0.value
+                      value: vm_no_zabbix_host
+      valuemaps:
+        - uuid: 6b4fea70baa24a2aba7699e247fa40eb
+          name: 'Zabbix host presence'
+          mappings:
+            - value: '0'
+              newvalue: 'absent (pas de host Zabbix)'
+            - value: '1'
+              newvalue: 'present'

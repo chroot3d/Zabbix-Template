@@ -11,6 +11,7 @@ Sauf mention contraire dans la fiche du template, les templates de ce dépôt ci
 | Template | Type de collecte | Équipement cible | Fichier |
 |----------|------------------|------------------|---------|
 | PowerWalker UPS by SNMP | SNMP (RFC 1628) | Onduleurs PowerWalker avec carte réseau (NMC G2) | [`power/powerwalker_ups_snmp/`](power/powerwalker_ups_snmp/) |
+| Proxmox VM Zabbix agent check | HTTP agent + Script | Détection des VMs Proxmox absentes de Zabbix (sans agent) | [`server/proxmox_vm_agent_check/`](server/proxmox_vm_agent_check/) |
 
 ## Structure du dépôt
 
@@ -21,8 +22,11 @@ Sauf mention contraire dans la fiche du template, les templates de ce dépôt ci
 │   └── powerwalker_ups_snmp/
 │       ├── template_powerwalker_ups_snmp.yaml
 │       └── README.md
-├── network/
 ├── server/
+│   └── proxmox_vm_agent_check/
+│       ├── template_proxmox_vm_agent_check.yaml
+│       └── README.md
+├── network/
 └── ...
 ```
 
