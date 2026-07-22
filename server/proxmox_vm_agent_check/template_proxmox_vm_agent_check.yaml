@@ -54,17 +54,14 @@ zabbix_export:
             - type: JAVASCRIPT
               parameters:
                 - |
-                  // Filtre les VMs QEMU et exclut les noms correspondant a {$ZBX.VM.IGNORE.MATCHES}
+                  // Ne garde que les VMs QEMU et construit les macros LLD.
+                  // L'exclusion (serveur/proxys Zabbix) est geree par le filtre LLD natif.
                   var rows = JSON.parse(value);
-                  var ignore = '{$ZBX.VM.IGNORE.MATCHES}';
-                  var re = null;
-                  try { if (ignore && ignore.indexOf('{' + '$') !== 0) { re = new RegExp(ignore); } } catch (e) { re = null; }
                   var out = [];
                   for (var i = 0; i < rows.length; i++) {
                       var r = rows[i];
                       if (r.type !== 'qemu') { continue; }
                       if (!r.name) { continue; }
-                      if (re && re.test(r.name)) { continue; }
                       out.push({
                           '{#PVE.VM.NAME}': r.name,
                           '{#PVE.VM.VMID}': (r.vmid !== undefined ? String(r.vmid) : ''),
@@ -72,6 +69,13 @@ zabbix_export:
                       });
                   }
                   return JSON.stringify(out);
+          filter:
+            evaltype: AND
+            conditions:
+              - macro: '{#PVE.VM.NAME}'
+                value: '{$ZBX.VM.IGNORE.MATCHES}'
+                operator: NOT_MATCHES_REGEX
+                formulaid: A
           item_prototypes:
             - uuid: 70f12b925ad44aacb12794b00fa279be
               name: 'VM [{#PVE.VM.NAME}]: Zabbix host present'
